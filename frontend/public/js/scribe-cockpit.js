@@ -980,11 +980,32 @@
     state.aiDiagnosisLastError = null;
 
     const ctx = getActiveHistoryContext();
-    state.latestSoapNote = getActiveNoteForItem(ctx.item) || loadLatestSoap() || {};
-    if (!state.soapGenerating) renderSoapNote(state.latestSoapNote);
+    const existingNote = getActiveNoteForItem(ctx.item);
 
-    syncDropdownToActiveTranscript();
-    renderAiDiagnosisUi(null);
+    // If switching to a transcript that has an existing note, show it
+    if (existingNote && Object.keys(existingNote).length > 0) {
+      state.latestSoapNote = existingNote;
+      if (!state.soapGenerating) renderSoapNote(state.latestSoapNote);
+      syncDropdownToActiveTranscript();
+      renderAiDiagnosisUi(null);
+    } else {
+      // No existing note - clear everything and show selection prompt
+      state.latestSoapNote = {};
+      renderSoapBlank();
+      showNoteSelectionPrompt();
+      clearAiDiagnosisPaneUi();
+      clearEhrNoteDetail();
+      // Reset template dropdown to default
+      if (dom.templateSelect) {
+        dom.templateSelect.value = CONFIG.SOAP_NOTE_TEMPLATE_ID;
+      }
+    }
+  }
+
+  function clearEhrNoteDetail() {
+    if (dom.noteDetail) {
+      dom.noteDetail.innerHTML = `<div class="ehr-placeholder">Select a note to view details</div>`;
+    }
   }
 
   function appendTranscriptItem({ from, to, text, timestamp }) {
@@ -1014,8 +1035,9 @@
 
     setActiveTranscriptId(item.id);
 
-    // Automatically generate note using the selected template
-    requestNoteGenerationForActiveTranscript(selectedTemplateId);
+    // Do not auto-generate note - user must select template manually
+    renderSoapBlank();
+    showNoteSelectionPrompt();
   }
 
   // =============================================================================
@@ -1067,6 +1089,28 @@
 
   function renderSoapBlank() {
     soapContainerEnsure().innerHTML = '';
+  }
+
+  function showNoteSelectionPrompt() {
+    const scroller = soapContainerEnsure();
+    scroller.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; height: 100%; min-height: 300px;">
+        <div style="text-align: center; padding: 32px; max-width: 500px;">
+          <h3 style="font-size: 20px; font-weight: 700; color: #ffffff; margin-bottom: 16px;">
+            Please Select Your Note
+          </h3>
+          <p style="font-size: 14px; color: #9ca3af; margin-bottom: 24px;">
+            Choose a note template from the dropdown above to generate your clinical note from the selected transcription.
+          </p>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+            <svg style="width: 24px; height: 24px; color: #6366f1;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path>
+            </svg>
+            <span style="font-size: 13px; color: #94a3b8; font-weight: 600;">Select template above</span>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function ensureTopHeadingBadge() {
@@ -2788,11 +2832,6 @@
     }
 
     if (packet.type === 'transcript_console') {
-      if (!state.templateSelected) {
-        showTemplateSelectionModal();
-        return;
-      }
-
       const p = packet.data || {};
       const { from, to, text = '', final = false, timestamp } = p;
 
@@ -4033,8 +4072,6 @@
 
       await initTemplateDropdown();
       setTemplateSelectValue(getActiveTemplateIdForItem(getActiveHistoryContext().item));
-
-      showTemplateSelectionModal();
 
       renderAiDiagnosisUi(null);
     } catch (e) {
