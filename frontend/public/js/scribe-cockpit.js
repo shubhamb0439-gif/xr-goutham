@@ -221,7 +221,7 @@
 
   function normalizeTemplateId(v) {
     const s = String(v ?? '').trim();
-    return s ? s : CONFIG.SOAP_NOTE_TEMPLATE_ID;
+    return s;
   }
 
   function templateIdToApiValue(v) {
@@ -764,14 +764,14 @@
           item.note = { templateId: String(firstKey), data: item.notes.templates[firstKey] || {} };
           changed = true;
         } else {
-          item.note = { templateId: CONFIG.SOAP_NOTE_TEMPLATE_ID, data: {} };
+          item.note = { templateId: '', data: {} };
           changed = true;
         }
       }
 
       if (item.note) {
         const tid = String(item.note.templateId ?? '').trim();
-        if (!tid || tid === 'default') {
+        if (tid === 'default') {
           item.note.templateId = CONFIG.SOAP_NOTE_TEMPLATE_ID;
           changed = true;
         }
@@ -811,12 +811,12 @@
   }
 
   function setActiveTemplateIdForItem(item, templateId) {
-    item.note = item.note || { templateId: CONFIG.SOAP_NOTE_TEMPLATE_ID, data: {} };
+    item.note = item.note || { templateId: '', data: {} };
     item.note.templateId = normalizeTemplateId(templateId);
   }
 
   function setActiveNoteDataForItem(item, noteObj) {
-    item.note = item.note || { templateId: CONFIG.SOAP_NOTE_TEMPLATE_ID, data: {} };
+    item.note = item.note || { templateId: '', data: {} };
     item.note.data = noteObj || {};
   }
 
@@ -1017,8 +1017,8 @@
 
     removeTranscriptPlaceholder();
 
-    // Use the currently selected template ID from the dropdown
-    const selectedTemplateId = dom.templateSelect?.value || CONFIG.SOAP_NOTE_TEMPLATE_ID;
+    // Use the currently selected template ID from the dropdown (empty if placeholder)
+    const selectedTemplateId = dom.templateSelect?.value || '';
 
     const item = {
       id: uid(),
@@ -2567,6 +2567,16 @@
 
   async function applyTemplateToActiveTranscript(newTemplateId) {
     const templateId = normalizeTemplateId(newTemplateId);
+
+    // Don't apply if template ID is empty
+    if (!templateId) {
+      setTemplateSelectValue('');
+      state.latestSoapNote = {};
+      renderSoapBlank();
+      clearAiDiagnosisPaneUi();
+      return;
+    }
+
     setTemplateSelectValue(templateId);
 
     // Clear old note data immediately to prevent showing wrong template sections
