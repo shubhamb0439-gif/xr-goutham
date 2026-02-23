@@ -822,9 +822,13 @@
 
   function setTemplateSelectValue(value) {
     if (!dom.templateSelect) return;
+    if (!value) {
+      dom.templateSelect.value = '';
+      return;
+    }
     const v = normalizeTemplateId(value);
     const has = Array.from(dom.templateSelect.options || []).some((o) => o.value === v);
-    dom.templateSelect.value = has ? v : CONFIG.SOAP_NOTE_TEMPLATE_ID;
+    dom.templateSelect.value = has ? v : '';
   }
 
   function syncDropdownToActiveTranscript() {
@@ -912,7 +916,7 @@
       state.soapGenerating = false;
       stopSoapGenerationTimer();
       renderSoapBlank();
-      if (dom.templateSelect) setTemplateSelectValue(CONFIG.SOAP_NOTE_TEMPLATE_ID);
+      if (dom.templateSelect) setTemplateSelectValue('');
       clearAiDiagnosisPaneUi();
       return;
     }
@@ -995,9 +999,9 @@
       showNoteSelectionPrompt();
       clearAiDiagnosisPaneUi();
       clearEhrNoteDetail();
-      // Reset template dropdown to default
+      // Reset template dropdown to placeholder
       if (dom.templateSelect) {
-        dom.templateSelect.value = CONFIG.SOAP_NOTE_TEMPLATE_ID;
+        dom.templateSelect.value = '';
       }
     }
   }
@@ -2581,6 +2585,14 @@
 
     dom.templateSelect.innerHTML = '';
 
+    // Add placeholder option
+    const optPlaceholder = document.createElement('option');
+    optPlaceholder.value = '';
+    optPlaceholder.textContent = 'Please select your note';
+    optPlaceholder.disabled = true;
+    optPlaceholder.selected = true;
+    dom.templateSelect.appendChild(optPlaceholder);
+
     const optSoap = document.createElement('option');
     optSoap.value = CONFIG.SOAP_NOTE_TEMPLATE_ID;
     optSoap.textContent = 'SOAP Note';
@@ -2609,8 +2621,10 @@
     syncDropdownToActiveTranscript();
 
     dom.templateSelect.onchange = () => {
+      const selectedValue = dom.templateSelect.value;
+      if (!selectedValue) return; // ignore placeholder selection
       state.templateSelected = true;
-      applyTemplateToActiveTranscript(dom.templateSelect.value || CONFIG.SOAP_NOTE_TEMPLATE_ID);
+      applyTemplateToActiveTranscript(selectedValue || CONFIG.SOAP_NOTE_TEMPLATE_ID);
     };
   }
 
@@ -2979,7 +2993,7 @@
     state.latestSoapNote = {};
 
     renderSoapBlank();
-    if (dom.templateSelect) setTemplateSelectValue(CONFIG.SOAP_NOTE_TEMPLATE_ID);
+    if (dom.templateSelect) setTemplateSelectValue('');
 
     state.medAvailability.clear();
     state.medicationValidationPending = false;
@@ -3394,7 +3408,7 @@
       state.latestSoapNote = {};
       saveLatestSoap(state.latestSoapNote);
       renderSoapBlank();
-      setTemplateSelectValue(CONFIG.SOAP_NOTE_TEMPLATE_ID);
+      setTemplateSelectValue('');
       clearAiDiagnosisPaneUi();
       return;
     }
@@ -3419,7 +3433,7 @@
       syncDropdownToActiveTranscript();
     } else {
       renderSoapBlank();
-      setTemplateSelectValue(CONFIG.SOAP_NOTE_TEMPLATE_ID);
+      setTemplateSelectValue('');
       clearAiDiagnosisPaneUi();
     }
   }
