@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>XR Vision (Web Device)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1220" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+
+    <!-- Device-only PWA -->
+    <link rel="manifest" href="/device.webmanifest">
+    <link rel="icon" href="/public/images/xr-logo-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/public/images/xr-logo-192.png" />
+    <!-- Styles -->
+    <link rel="stylesheet" href="/public/css/common.css" />
+    <link rel="stylesheet" href="/public/css/device.css" />
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>XR Vision</h1>
+            <div id="status" class="status status-disconnected">Status: Disconnected</div>
+        </header>
+
+        <!-- Last heard voice chip -->
+        <div id="chipLastCmd" class="chip" hidden>Heard: …</div>
+
+        <!-- Controls -->
+        <section class="card controls">
+
+            <!-- XR Device ID input (similar to Dock "Enter the ID") -->
+            <div class="controls-row">
+                <input id="deviceXrIdInput" class="input" placeholder="Enter Device XR ID (e.g. 1234)" />
+            </div>
+            <div class="controls-row">
+                <button id="btnConnect" class="chip-btn">Connect</button>
+                <button id="btnStream" class="chip-btn">Start Stream</button>
+                <button id="btnMute" class="chip-btn">Mute</button>
+                <button id="btnVideo" class="chip-btn">Hide Video</button>
+                <button id="btnVoice" class="chip-btn">Start Voice</button>
+            </div>
+            <div class="controls-row">
+                <button id="btnStartRec" class="btn-outline">Start Recording</button>
+                <button id="btnStopRec" class="btn-outline">Stop Recording</button>
+            </div>
+        </section>
+
+        <!-- Preview -->
+        <section class="card preview">
+            <video id="preview" autoplay playsinline webkit-playsinline muted></video>
+
+            <div id="noStream" class="preview-empty" hidden>Stream not ready</div>
+        </section>
+
+        <!-- Messages -->
+        <section class="messages card">
+            <h2>Messages</h2>
+            <div id="msgList" class="msg-list"></div>
+        </section>
+
+        <!-- Composer -->
+        <section class="composer">
+            <input id="msgInput" class="input" placeholder="Type a message…" />
+            <label class="urgent">
+                <input id="chkUrgent" type="checkbox" />
+                <span>Urgent</span>
+            </label>
+            <button id="btnSend" class="btn-send">Send</button>
+        </section>
+    </div>
+
+    <!-- Socket.IO client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- XR config (must load before app modules) -->
+    <script src="/public/js/config.js"></script>
+    <!-- App logic -->
+    <script type="module" src="/public/js/ui.js"></script>
+
+
+    <!-- Service worker registration -->
+    <script>
+        // Robust SW registration: skip localhost and check for 404
+        async function maybeRegisterSW() {
+            // Check if service worker is supported
+            if (!('serviceWorker' in navigator)) {
+                console.log('[SW] Service Worker not supported in this browser');
+                return;
+            }
+
+            // Skip registration on localhost
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                console.log('[SW] Skipping registration on localhost');
+                return;
+            }
+
+            // Only register on /device pages
+            if (!location.pathname.startsWith('/device')) {
+                return;
+            }
+
+            try {
+                // Check if sw.js exists before attempting registration
+                const response = await fetch('/device/sw.js', { method: 'HEAD' });
+                if (response.status !== 200) {
+                    console.log(`[SW] Service worker script not found (${response.status})`);
+                    return;
+                }
+
+                // All checks passed - register the service worker
+                const registration = await navigator.serviceWorker.register('/device/sw.js', { scope: '/device/' });
+                console.log('[SW] Registered successfully', registration.scope);
+            } catch (err) {
+                console.warn('[SW] Registration failed:', err.message);
+            }
+        }
+
+        // Register on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', maybeRegisterSW);
+        } else {
+            maybeRegisterSW();
+        }
+
+        // Optional: show a custom "Install" button if you add one with [data-install]
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.querySelector('[data-install]');
+            if (btn) btn.style.display = 'inline-flex';
+        });
+        document.querySelector('[data-install]')?.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        });
+    </script>
+
+</body>
+
+</html>

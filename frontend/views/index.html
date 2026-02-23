@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <title>XR Messaging Web App</title>
+
+    <!-- App favicon -->
+    <link rel="icon" type="image/png" sizes="512x512" href="/public/images/xr-logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/public/images/xr-logo.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        urgent: '#dc2626',
+                        overlay: 'rgba(0, 0, 0, 0.7)',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/public/css/styles.css">
+</head>
+
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 text-white font-sans h-screen overflow-hidden">
+    <div class="flex flex-col h-full">
+
+        <!-- Top Bar -->
+        <div class="flex justify-between items-center px-4 md:px-6 py-3 md:py-4 bg-gray-900 shadow-md z-10">
+            <h1 class="text-xl md:text-2xl font-bold text-white">XR Vision Dock</h1>
+            <div class="flex gap-4 items-center">
+                <span id="status"
+                    class="px-3 py-1 rounded-full text-white bg-yellow-500 text-xs md:text-base">Connecting</span>
+                <div class="text-xs md:text-sm text-gray-300">🔋 Battery: <span id="batteryLevel">83%</span></div>
+            </div>
+        </div>
+
+        <!-- Main Body Responsive -->
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+            <!-- Video Stream Top/Left -->
+            <div class="relative w-full md:w-2/3 h-56 md:h-auto bg-black flex-shrink-0">
+                <video id="xrVideo" class="w-full h-full object-cover" autoplay playsinline muted></video>
+
+                <!-- Overlays -->
+                <div id="videoOverlay"
+                    class="absolute inset-0 bg-overlay text-white flex items-center justify-center text-lg md:text-2xl font-bold hidden">
+                    Video Hidden for Privacy
+                </div>
+                <div id="muteBadge"
+                    class="absolute top-3 right-3 bg-red-600 text-white px-3 py-1 text-xs md:text-sm rounded hidden">🔇
+                    Muted
+                </div>
+            </div>
+
+            <!-- Side Panel Bottom/Right -->
+            <div
+                class="w-full md:w-1/3 bg-gray-950 bg-opacity-90 text-xs md:text-sm overflow-y-auto px-3 md:px-4 py-2 md:py-3 space-y-4 md:space-y-6 max-h-[40vh] md:max-h-full">
+                <!-- Devices -->
+                <div>
+                    <h3 class="text-base font-semibold mb-2">Connected Devices</h3>
+                    <ul id="deviceList" class="list-disc pl-5 text-gray-300"></ul>
+                </div>
+                <!-- Recent Messages -->
+                <div>
+                    <h3 class="text-base font-semibold mb-2">Recent Messages</h3>
+                    <div id="recentMessages" class="space-y-2 max-h-20 md:max-h-32 overflow-y-auto"></div>
+                </div>
+                <!-- Message History -->
+                <div>
+                    <h3 class="text-base font-semibold mb-2">Message History</h3>
+                    <div id="messageHistory" class="space-y-2 max-h-24 md:max-h-48 overflow-y-auto"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls Footer -->
+        <div class="px-3 md:px-6 py-3 md:py-4 bg-gray-800 flex flex-col gap-2 shadow-inner z-10">
+            <div class="flex flex-col md:flex-row gap-2 md:gap-4">
+                <input type="text" id="usernameInput" placeholder="Your Name"
+                    class="flex-1 px-3 py-2 rounded bg-gray-900 border border-gray-700 placeholder-gray-500 text-white" />
+                <input type="text" id="xrIdInput" placeholder="Enter the ID"
+                    class="flex-1 px-3 py-2 rounded bg-gray-900 border border-gray-700 placeholder-gray-500 text-white" />
+            </div>
+            <textarea id="messageInput" placeholder="Type a message..."
+                class="w-full h-20 md:h-24 p-3 rounded bg-gray-900 border border-gray-700 placeholder-gray-500 text-white resize-none mt-2"></textarea>
+            <div class="flex flex-col md:flex-row justify-between items-center mt-1 gap-2 md:gap-0">
+                <label class="flex items-center space-x-2">
+                    <input type="checkbox" id="urgentCheckbox" class="accent-urgent" />
+                    <span>Mark as Urgent</span>
+                </label>
+                <div class="flex gap-2 md:gap-3 w-full md:w-auto">
+                    <button id="openScribeBtn"
+                        class="whitespace-nowrap bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm px-3 py-2 rounded-md border border-indigo-500/40 transition"
+                        title="Open Scribe Cockpit">
+                        Scribe Cockpit
+                    </button>
+                    <button id="sendButton"
+                        class="flex-1 md:flex-none bg-primary hover:bg-indigo-700 text-white px-4 md:px-6 py-2 rounded">Send</button>
+                    <button id="clearMessagesBtn"
+                        class="flex-1 md:flex-none bg-red-600 hover:bg-red-800 text-white px-4 md:px-6 py-2 rounded">Clear
+                        Messages</button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/public/js/webrtc-quality.js"></script>
+    <script src="/public/js/config.js"></script>
+    <script src="/public/js/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XR Tech Dashboard</title>
+
+    <!-- App favicon -->
+    <link rel="icon" type="image/png" sizes="512x512" href="/public/images/xr-logo.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/public/images/xr-logo.png">
+
+
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { panel: '#4B4F57', good: '#26C85A', bad: '#EA4335', ink: '#2F3238' }
+                }
+            }
+        };
+    </script>
+
+    <!-- Chart.js + time adapter (put OUTSIDE the config script) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+
+    <style>
+        .chip {
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: .3px;
+            padding: .70rem 1.1rem;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .15)
+        }
+
+        .chip-good {
+            background: #26C85A
+        }
+
+        .chip-bad {
+            background: #EA4335
+        }
+
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, .35);
+            background: rgba(255, 255, 255, .06)
+        }
+
+        .battery-btn {
+            width: auto;
+            padding: 0 .5rem;
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .glass {
+            backdrop-filter: blur(2px);
+            background: rgba(0, 0, 0, .12);
+            border: 1px solid rgba(255, 255, 255, .06)
+        }
+
+        .divider {
+            border-color: rgba(255, 255, 255, .12)
+        }
+    </style>
+</head>
+
+
+<body class="min-h-screen bg-[#4B4F57] text-white">
+    <header class="px-6 py-4 flex items-center justify-between">
+        <h1 class="text-2xl md:text-3xl font-semibold tracking-wide">XR Hub</h1>
+        <!-- 👇 live date/time outside the panel -->
+        <div id="nowStamp" class="text-white/60 text-xs md:text-sm tracking-wide uppercase"></div>
+
+    </header>
+
+    <main class="px-6 pb-10">
+        <section class="glass rounded-2xl p-5 md:p-6">
+            <!-- heading row -->
+            <!-- heading row -->
+            <div class="hidden md:grid grid-cols-12 gap-4 pb-3 mb-4 border-b divider">
+                <div class="col-span-2 text-left text-white/80">Providers</div>
+                <div class="col-span-4"></div>
+                <div class="col-span-2 text-center text-white/80">Connection</div>
+                <div class="col-span-4 text-right pr-2 text-white/80">Scribe</div>
+            </div>
+
+
+            <!-- rows container -->
+            <div id="rows" class="space-y-4"></div>
+
+            <!-- pagination (10 per page) -->
+            <div id="hubPagination" class="hub-pagination mt-4"></div>
+        </section>
+    </main>
+
+
+
+    <!-- Device Detail Modal -->
+    <div id="detailModal" class="hidden fixed inset-0 z-50 bg-black/60">
+        <div class="mx-auto my-10 max-w-6xl bg-zinc-900 rounded-2xl p-6 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="detailTitle" class="text-xl font-semibold text-white">Device Detail</h2>
+                <button id="detailClose"
+                    class="px-3 py-1 rounded bg-zinc-700 hover:bg-zinc-600 text-white">Close</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-zinc-800 p-4 rounded-xl">
+                    <h3 class="text-white mb-2">Battery %</h3>
+                    <canvas id="batteryChart" height="120"></canvas>
+                </div>
+                <div class="bg-zinc-800 p-4 rounded-xl">
+                    <h3 class="text-white mb-2">Network Throughput (Mbps)</h3>
+                    <canvas id="netChart" height="120"></canvas>
+                </div>
+                <div class="bg-zinc-800 p-4 rounded-xl">
+                    <h3 class="text-white mb-2">A/V Bitrate (kbps)</h3>
+                    <canvas id="bitrateChart" height="120"></canvas>
+                </div>
+                <div class="bg-zinc-800 p-4 rounded-xl">
+                    <h3 class="text-white mb-2">Jitter / RTT / Loss</h3>
+                    <canvas id="qualityChart" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.IO client from CDN (works on localhost and Azure) -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <!-- Use same-origin in prod; on localhost:3000, talk to backend on :8080 -->
+    <script>
+        // Use same-origin; the frontend proxies /socket.io → hub (works in dev & prod)
+        window.SOCKET_URL = window.location.origin;
+    </script>
+
+    <!-- Your app (served by Express/static) -->
+    <script src="/public/js/dashboard.js" defer></script>
+
+
+
+</body>
+
+</html>

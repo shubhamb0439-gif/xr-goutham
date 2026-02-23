@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <title>XR Messaging Web App</title>
+
+  <link rel="icon" type="image/png" sizes="512x512" href="/public/images/xr-logo.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/public/images/xr-logo.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { primary: '#4f46e5', urgent: '#dc2626', overlay: 'rgba(0,0,0,0.7)' }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="/public/css/scribe-cockpit.css">
+</head>
+
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 text-white font-sans h-screen overflow-hidden">
+  <noscript>
+    <div class="p-4 bg-red-700 text-white text-center">
+      JavaScript is disabled. The Scribe Cockpit requires JavaScript to display live status and transcripts.
+    </div>
+  </noscript>
+
+  <div id="appRoot" class="flex flex-col h-full" role="application" aria-label="XR Dock - Scribe Cockpit">
+    <div class="flex justify-between items-center px-4 md:px-6 py-3 md:py-4 bg-gray-900 shadow-md z-10">
+      <h1 class="text-xl md:text-2xl font-bold text-white">Rhea | AI Augmented EHR</h1>
+
+      <div id="topRightControls" class="flex gap-4 items-center">
+        <span id="statusPill" class="px-3 py-1 rounded-full text-white text-xs md:text-base bg-yellow-500 select-none"
+          aria-live="polite" aria-label="Connection status: Connecting">
+          Connecting
+        </span>
+
+        <button id="ehrButton" class="ehr-button" title="Open EHR Patient Lookup" aria-expanded="false"
+          aria-controls="ehrSidebar">
+          EHR
+        </button>
+      </div>
+    </div>
+
+    <div id="layoutRoot" class="flex-1 flex flex-col md:flex-row overflow-hidden scribe-layout">
+      <aside id="leftPane"
+        class="w-full md:w-1/3 bg-gray-950/90 text-xs md:text-sm px-3 md:px-4 py-3 flex flex-col overflow-hidden scribe-pane">
+
+        <section id="devicesPanel" class="scribe-pane-section scribe-pane-top" aria-label="Connected Devices">
+          <div class="scribe-pane-head">
+            <h3 class="text-base font-semibold">Connected Devices</h3>
+          </div>
+          <div class="scribe-pane-body">
+            <ul id="deviceList" class="list-disc pl-5 text-gray-300 space-y-1"></ul>
+          </div>
+        </section>
+
+        <!-- Connected Devices resize is intentionally disabled (CSS hides this handle) -->
+        <div class="resize-handle resize-handle-horizontal" role="separator" aria-orientation="horizontal"
+          aria-label="Resize Connected Devices panel" tabindex="0" data-resize="left-top"></div>
+
+        <section id="translationPanel" class="scribe-pane-section scribe-pane-bottom" aria-label="Live Translation">
+          <div class="scribe-pane-head">
+            <h3 class="text-base font-semibold">Live Translation</h3>
+          </div>
+
+          <div class="scribe-pane-body scribe-pane-body--fill">
+            <div id="liveTranscript"
+              class="scribe-scroll h-full overflow-y-auto px-1 py-2 space-y-2 text-sm md:text-base" aria-live="polite">
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <div class="resize-handle resize-handle-vertical" role="separator" aria-orientation="vertical"
+        aria-label="Resize Transcript/SOAP split" tabindex="0" data-resize="left-right"></div>
+
+      <main id="rightPane" class="flex-1 bg-gray-900/60 overflow-hidden flex flex-col min-w-0">
+        <!-- SOAP header bar -->
+        <div class="sticky top-0 z-10 bg-gray-900/60 px-4 py-3 border-b border-white/10">
+          <div class="scribe-soap-header">
+            <!-- TODO (future): convert "SOAP Note" into a dropdown trigger + dropdown menu here -->
+            <select id="templateSelect"
+              class="text-base md:text-lg font-semibold scribe-soap-title bg-transparent outline-none"
+              aria-label="Select note template">
+              <option value="default">SOAP Note</option>
+            </select>
+            <!-- JS-updated Total Edits will be moved here -->
+            <div id="totalEditsSlot" class="scribe-soap-edits" aria-label="Total edits"></div>
+          </div>
+        </div>
+
+        <div id="rightSplit" class="flex-1 min-h-0 relative scribe-right-split">
+          <section id="soapPane" class="scribe-right-top" aria-label="SOAP editor">
+            <div id="soapScroller" class="scribe-soap-scroll scribe-scroll"></div>
+
+            <div id="soapActions" class="scribe-soap-actions">
+              <button id="_scribe_clear" class="scribe-btn scribe-btn-ghost" type="button">Clear</button>
+              <button id="_scribe_save" class="scribe-btn scribe-btn-primary" type="button">Save</button>
+              <button id="_scribe_add_ehr" class="scribe-btn scribe-add-ehr-disabled" type="button">
+                Add To EHR
+              </button>
+
+            </div>
+          </section>
+
+          <div class="resize-handle resize-handle-horizontal" role="separator" aria-orientation="horizontal"
+            aria-label="Resize SOAP/AI Diagnosis split" tabindex="0" data-resize="right-top"></div>
+
+          <section id="aiPane" class="scribe-right-bottom" aria-label="AI Diagnosis">
+            <!-- AI Diagnosis heading centered, same size as SOAP heading -->
+            <div class="scribe-ai-head">
+              <h2 class="text-base md:text-lg font-semibold scribe-ai-title">AI Diagnosis</h2>
+            </div>
+
+            <!-- Current state: no data -->
+            <div id="aiDiagnosisBody" class="scribe-ai-body scribe-scroll">
+              <div class="scribe-ai-empty">No data available</div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="ehrSidebar" class="ehr-sidebar" aria-label="EHR patient sidebar" aria-hidden="true">
+    <div class="resize-handle resize-handle-vertical ehr-resize-handle" data-resize="ehr-top" role="separator"
+      aria-orientation="vertical" aria-label="Resize EHR sidebar" tabindex="0"></div>
+
+    <div class="ehr-sidebar-header">
+      <div class="ehr-header-flex">
+        <h2 class="ehr-header-title">EHR patient</h2>
+        <span class="ehr-demo-badge">Demo</span>
+
+        <button id="ehrCloseButton" class="ehr-close-button" title="Close" aria-label="Close EHR">×</button>
+      </div>
+    </div>
+
+    <div class="ehr-sidebar-content">
+      <div id="ehrInitialState" class="ehr-initial-state">
+        <input type="text" id="mrnInput" class="ehr-input" placeholder="Enter Patient MRN" />
+        <button id="mrnSearchButton" class="ehr-search-button">Search</button>
+        <div id="ehrError" class="ehr-error" style="display:none;"></div>
+      </div>
+
+      <div id="ehrPatientState" class="ehr-patient-state" style="display:none;">
+        <div class="ehr-card">
+          <h4 class="ehr-card-title">Patient information</h4>
+          <div class="ehr-patient-info ehr-patient-info-grid">
+            <div class="ehr-info-pair">
+              <span class="ehr-label-text">Name:</span>
+              <span id="patientNameDisplay" class="ehr-value-text"></span>
+            </div>
+            <div class="ehr-info-pair">
+              <span class="ehr-label-text">MRN:</span>
+              <span id="patientMRNDisplay" class="ehr-value-text"></span>
+            </div>
+            <div class="ehr-info-pair">
+              <span class="ehr-label-text">Email:</span>
+              <span id="patientEmailDisplay" class="ehr-value-text"></span>
+            </div>
+            <div class="ehr-info-pair">
+              <span class="ehr-label-text">Mobile:</span>
+              <span id="patientMobileDisplay" class="ehr-value-text"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ehr-card">
+          <h4 class="ehr-card-title">Clinical note</h4>
+          <div id="notesList" class="ehr-notes-scroll"></div>
+        </div>
+
+        <div class="ehr-card">
+          <div id="noteDetail" class="ehr-note-content">
+            <div class="ehr-placeholder">Select a note to view details</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ehrOverlay" class="ehr-overlay" aria-hidden="true"></div>
+
+  <script>
+      (function () {
+        if (window.__scribeUiWired) return;
+        window.__scribeUiWired = true;
+
+        const $ = (id) => document.getElementById(id);
+
+        const ehrSidebar = $('ehrSidebar');
+        const ehrOverlay = $('ehrOverlay');
+        const ehrButton = $('ehrButton');
+
+        const layoutRoot = $('layoutRoot');
+        const leftPane = $('leftPane');
+        const rightSplit = $('rightSplit');
+        const soapPane = $('soapPane');
+
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+        function setVar(name, px) {
+          document.documentElement.style.setProperty(name, px + 'px');
+        }
+
+        function syncEhrState() {
+          const open = ehrSidebar && ehrSidebar.classList.contains('active');
+
+          document.body.classList.toggle('ehr-open', open);
+
+          if (ehrSidebar) ehrSidebar.setAttribute('aria-hidden', open ? 'false' : 'true');
+          if (ehrOverlay) ehrOverlay.setAttribute('aria-hidden', open ? 'false' : 'true');
+          if (ehrButton) ehrButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+          if (ehrOverlay) ehrOverlay.style.pointerEvents = 'none';
+
+          if (open && ehrSidebar) {
+            const w = parseFloat(getComputedStyle(ehrSidebar).width) || 360;
+            setVar('--ehr-sidebar-w', w);
+            ehrSidebar.style.width = '';
+          }
+        }
+
+        if (ehrSidebar) {
+          new MutationObserver(syncEhrState)
+            .observe(ehrSidebar, { attributes: true, attributeFilter: ['class'] });
+          syncEhrState();
+        }
+
+        if (ehrOverlay) {
+          ehrOverlay.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          });
+        }
+
+        function wireHandle(handleEl) {
+          const kind = handleEl.getAttribute('data-resize');
+          if (!kind) return;
+
+          if (kind === 'left-top') return; // disabled
+
+          handleEl.addEventListener('pointerdown', function (e) {
+            if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+            e.preventDefault();
+            handleEl.setPointerCapture?.(e.pointerId);
+
+            const orientation = (kind === 'right-top') ? 'horizontal' : 'vertical';
+            document.body.classList.add('is-resizing');
+            document.body.dataset.resizeOrientation = orientation;
+
+            const startX = e.clientX;
+            const startY = e.clientY;
+
+            const layoutRect = layoutRoot.getBoundingClientRect();
+            const leftRect = leftPane.getBoundingClientRect();
+            const soapRect = soapPane.getBoundingClientRect();
+            const rightSplitRect = rightSplit.getBoundingClientRect();
+
+            let startVal = 0;
+            if (kind === 'left-right') startVal = leftRect.width;
+            if (kind === 'right-top') startVal = soapRect.height;
+            if (kind === 'ehr-top') {
+              const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ehr-sidebar-w'));
+              startVal = v || (ehrSidebar ? ehrSidebar.getBoundingClientRect().width : 360);
+            }
+
+            /* Smooth + scalable drag (throttle to animation frames) */
+            let rafId = 0;
+            let lastClientX = startX;
+            let lastClientY = startY;
+
+            const applyMove = () => {
+              rafId = 0;
+
+              const dx = lastClientX - startX;
+              const dy = lastClientY - startY;
+
+              if (kind === 'left-right') {
+                const min = 260;
+                const max = clamp(layoutRect.width * 0.6, 420, layoutRect.width - 320);
+                setVar('--left-pane-w', clamp(startVal + dx, min, max));
+              }
+
+              if (kind === 'right-top') {
+                const min = 220;
+                const max = rightSplitRect.height - 160;
+                setVar('--right-top-h', clamp(startVal + dy, min, max));
+              }
+
+              if (kind === 'ehr-top') {
+                const viewportW = document.documentElement.clientWidth || window.innerWidth;
+                const min = 320;
+                const max = Math.max(min + 40, viewportW - 520);
+                const newW = clamp(startVal - dx, min, max);
+
+                setVar('--ehr-sidebar-w', newW);
+                if (ehrSidebar) ehrSidebar.style.width = '';
+              }
+            };
+
+            const onMove = (ev) => {
+              lastClientX = ev.clientX;
+              lastClientY = ev.clientY;
+              if (!rafId) rafId = requestAnimationFrame(applyMove);
+            };
+
+            const onUp = () => {
+              document.body.classList.remove('is-resizing');
+              delete document.body.dataset.resizeOrientation;
+
+              if (rafId) cancelAnimationFrame(rafId);
+              rafId = 0;
+
+              window.removeEventListener('pointermove', onMove);
+              window.removeEventListener('pointerup', onUp);
+            };
+
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+          });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+          document.querySelectorAll('.resize-handle').forEach(wireHandle);
+        });
+      })();
+  </script>
+   <!--(SweetAlert2) -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="/public/js/scribe-cockpit.js"></script>
+</body>
+
+</html>

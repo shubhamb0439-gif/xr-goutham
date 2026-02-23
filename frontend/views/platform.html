@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Platform </title>
+  <link rel="stylesheet" href="/public/css/common.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6650a4',
+            'primary-dark': '#D0BCFF',
+            surface: {
+              light: '#f6f9f7',
+              dark: '#111827'
+            },
+            bg: {
+              light: '#FFFBFE',
+              dark: '#0b0f17'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Helvetica, Arial;
+      margin: 0;
+      padding: 0;
+      background: #0b0f17;
+      color: #e5e7eb;
+    }
+
+    .sidebar-item {
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-item:hover {
+      background: rgba(208, 188, 255, 0.1);
+      transform: translateX(4px);
+    }
+
+    .sidebar-item.active {
+      background: rgba(208, 188, 255, 0.15);
+      border-left: 3px solid #D0BCFF;
+    }
+
+    .stat-card {
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(208, 188, 255, 0.15);
+    }
+
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .toast {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      z-index: 9999;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(400px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .toast.success {
+      background: #16a34a;
+      color: white;
+    }
+
+    .toast.error {
+      background: #ef4444;
+      color: white;
+    }
+
+    input,
+    select,
+    textarea {
+      background: #1f2937 !important;
+      border: 1px solid #374151 !important;
+      color: #e5e7eb !important;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #D0BCFF !important;
+      outline: none;
+      ring: 2px;
+      ring-color: rgba(208, 188, 255, 0.3);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6650a4 0%, #8B7BB8 100%);
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      transform: scale(1.02);
+      box-shadow: 0 5px 15px rgba(102, 80, 164, 0.4);
+    }
+
+    .table-row {
+      transition: background 0.2s ease;
+    }
+
+    .table-row:hover {
+      background: rgba(208, 188, 255, 0.05);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loginForm" class="login-container">
+    <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 w-full max-w-md">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-white mb-2">Platform </h1>
+        <p class="text-gray-400"></p>
+      </div>
+      <form id="loginFormElement">
+        <div class="mb-6">
+          <label for="email" class="block text-sm font-semibold text-gray-300 mb-2">Email</label>
+          <input type="email" id="email" name="email" autocomplete="username" required
+            class="w-full px-4 py-3 rounded-lg" />
+        </div>
+        <div class="mb-6">
+          <label for="password" class="block text-sm font-semibold text-gray-300 mb-2">Password</label>
+          <input type="password" id="password" name="password" autocomplete="current-password" required
+            class="w-full px-4 py-3 rounded-lg" />
+        </div>
+        <button type="submit" class="w-full btn-primary text-white font-semibold py-3 rounded-lg" id="loginBtn">
+          Sign In
+        </button>
+        <div id="errorMessage" class="mt-4 p-3 bg-red-900 text-red-200 rounded-lg text-sm text-center hidden"></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="dashboardContent" class="hidden">
+    <div class="flex h-screen bg-gray-900">
+      <aside class="w-64 bg-gray-800 shadow-xl flex flex-col">
+        <div class="p-6 border-b border-gray-700">
+          <h2 class="text-xl font-bold text-white">XR Platform</h2>
+          <p class="text-sm text-gray-400 mt-1" id="userEmail"></p>
+        </div>
+
+        <nav class="flex-1 p-4 space-y-2">
+          <button
+            class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-300 font-medium flex items-center space-x-3 active"
+            data-view="dashboard">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            <span>Dashboard</span>
+          </button>
+
+          <button
+            class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-300 font-medium flex items-center space-x-3"
+            data-view="create-users" data-screen-id="6">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+            </svg>
+            <span>Create Users</span>
+          </button>
+
+          <button
+            class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-300 font-medium flex items-center space-x-3"
+            data-view="assign-users" data-screen-id="8">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <span>Assign Users</span>
+          </button>
+
+
+          <button
+            class="sidebar-item w-full text-left px-4 py-3 rounded-lg text-gray-300 font-medium flex items-center space-x-3"
+            data-view="system-logs">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>System Logs</span>
+          </button>
+
+          <!-- XR Screens quick links (external navigation) -->
+          <div class="mt-6 border-t border-gray-700 pt-4">
+            <p class="text-xs font-semibold tracking-wider text-gray-500 mb-3">
+              XR Screens
+            </p>
+
+            <!-- XR Vision Dock (root / ) -->
+            <!-- XR Vision Dock (root / ) -->
+            <!-- XR Vision Dock (root / ) -->
+            <a href="/" target="_blank" rel="noopener noreferrer" class="xr-screen-item group block mb-3 rounded-xl bg-gradient-to-r from-primary to-purple-600 px-4 py-3 shadow-lg
+         hover:shadow-xl transition transform hover:-translate-y-0.5" data-screen-id="3">
+
+
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-black/20 backdrop-blur-sm">
+                    <!-- monitor icon -->
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 5h16a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm6 14h4" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p class="text-[11px] uppercase tracking-wide text-gray-200/80">
+                      XR Vision
+                    </p>
+                    <p class="text-sm font-semibold text-white">
+                      XR Vision Dock
+                    </p>
+                  </div>
+                </div>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/20 text-white
+                         group-hover:translate-x-1 group-hover:bg-black/10 transition-transform">
+                  <!-- arrow icon -->
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </a>
+
+            <!-- XR Scribe Cockpit -->
+            <!-- XR Scribe Cockpit -->
+            <a href="/scribe-cockpit" target="_blank" rel="noopener noreferrer" class="xr-screen-item group block mb-3 rounded-xl bg-gray-800/80 px-4 py-3 border border-gray-700
+         hover:border-primary-dark hover:bg-gray-800 transition transform hover:-translate-y-0.5" data-screen-id="2">
+
+
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <span
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary-dark">
+                    <!-- pen icon -->
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15.232 5.232l3.536 3.536M4 20h4l9.232-9.232a2.5 2.5 0 10-3.536-3.536L4 16.464V20z" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p class="text-[11px] uppercase tracking-wide text-gray-400">
+                      Scribe Cockpit
+                    </p>
+                    <p class="text-sm font-semibold text-gray-100">
+                      XR Dock
+                    </p>
+                  </div>
+                </div>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/70 text-gray-200
+                         group-hover:translate-x-1 group-hover:bg-primary/40 transition-transform">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </a>
+
+            <!-- XR Hub Dashboard -->
+            <!-- XR Hub Dashboard -->
+            <a href="/dashboard" target="_blank" rel="noopener noreferrer" class="xr-screen-item group block mb-3 rounded-xl bg-gray-800/80 px-4 py-3 border border-gray-700
+         hover:border-primary-dark hover:bg-gray-800 transition transform hover:-translate-y-0.5" data-screen-id="1">
+
+
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <span
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/10 text-green-400">
+                    <!-- chart icon -->
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 3v18h18M7 14l3-3 4 4 4-6" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p class="text-[11px] uppercase tracking-wide text-gray-400">
+                      Hub
+                    </p>
+                    <p class="text-sm font-semibold text-gray-100">
+                      XR Hub Dashboard
+                    </p>
+                  </div>
+                </div>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/70 text-gray-200
+                         group-hover:translate-x-1 group-hover:bg-green-500/40 transition-transform">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </a>
+
+            <!-- XR Device (PWA / Android) -->
+            <!-- XR Device (PWA / Android) -->
+            <a href="/device" target="_blank" rel="noopener noreferrer" class="xr-screen-item group block mb-3 rounded-xl bg-gray-800/80 px-4 py-3 border border-gray-700
+         hover:border-primary-dark hover:bg-gray-800 transition transform hover:-translate-y-0.5" data-screen-id="4">
+
+              <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                    <!-- phone/headset icon -->
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z" />
+                    </svg>
+                  </span>
+                  <div>
+                    <p class="text-[11px] uppercase tracking-wide text-gray-400">
+                      Device
+                    </p>
+                    <p class="text-sm font-semibold text-gray-100">
+                      XR Device
+                    </p>
+                  </div>
+                </div>
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-700/70 text-gray-200
+                         group-hover:translate-x-1 group-hover:bg-blue-500/40 transition-transform">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </a>
+          </div>
+
+
+
+        </nav>
+
+        <div class="p-4 border-t border-gray-700">
+          <button id="logoutBtn"
+            class="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors">
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      <main class="flex-1 overflow-y-auto">
+        <div class="p-8">
+          <div id="view-dashboard" class="view-content">
+            <div class="mb-8">
+              <h1 class="text-3xl font-bold text-white mb-2">Dashboard</h1>
+              <p class="text-gray-400">Overview of your platform metrics</p>
+            </div>
+
+            <!-- PROFILE ICON BUTTON (top-right of the header) -->
+            <div class="absolute top-4 right-6">
+              <button id="profileButton"
+                class="bg-gray-700 hover:bg-gray-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg">
+                <span class="text-lg font-bold">👤</span>
+              </button>
+            </div>
+
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div class="stat-card bg-gray-800 rounded-xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="p-3 bg-blue-500 bg-opacity-20 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <p class="text-gray-400 text-sm mb-1">Total Users</p>
+                <p class="text-3xl font-bold text-white" id="totalUsers">0</p>
+              </div>
+
+              <div class="stat-card bg-gray-800 rounded-xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="p-3 bg-green-500 bg-opacity-20 rounded-lg">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                </div>
+                <p class="text-gray-400 text-sm mb-1">Providers</p>
+                <p class="text-3xl font-bold text-white" id="totalProviders">0</p>
+              </div>
+
+              <div class="stat-card bg-gray-800 rounded-xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="p-3 bg-purple-500 bg-opacity-20 rounded-lg">
+                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
+                </div>
+                <p class="text-gray-400 text-sm mb-1">Scribes</p>
+                <p class="text-3xl font-bold text-white" id="totalScribes">0</p>
+              </div>
+
+              <div class="stat-card bg-gray-800 rounded-xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                  <div class="p-3 bg-yellow-500 bg-opacity-20 rounded-lg">
+                    <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                </div>
+                <p class="text-gray-400 text-sm mb-1">Employees</p>
+                <p class="text-3xl font-bold text-white" id="totalEmployees">0</p>
+              </div>
+            </div>
+
+
+
+            <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+              <h2 class="text-xl font-bold text-white mb-4">Recent Logins</h2>
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="border-b border-gray-700">
+                    <tr class="text-left text-gray-400 text-sm">
+                      <th class="pb-3">Name</th>
+                      <th class="pb-3">Email</th>
+                      <th class="pb-3">XR ID</th>
+                      <th class="pb-3">Type</th>
+                      <th class="pb-3">Last Login</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recentLoginsTable" class="text-gray-300">
+                    <tr>
+                      <td colspan="5" class="py-8 text-center text-gray-500">No recent logins</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="view-create-users" class="view-content hidden">
+            <div class="mb-8">
+              <h1 class="text-3xl font-bold text-white mb-2">Create User</h1>
+              <p class="text-gray-400">Add a new user to the platform</p>
+            </div>
+
+            <!-- NEW unified dynamic Create User card -->
+            <div class="bg-gray-800 rounded-xl p-8 shadow-lg max-w-2xl">
+              <form id="createUserForm">
+                <!-- Category selector -->
+                <div class="mb-6">
+                  <label for="userCategory" class="block text-sm font-semibold text-gray-300 mb-2">
+                    User Category
+                  </label>
+                  <select id="userCategory" name="category" class="w-full px-4 py-3 rounded-lg">
+                    <option value="provider">Provider</option>
+                    <option value="scribe">Scribe</option>
+                    <option value="employee">Employee</option>
+                    <option value="patient">Patient</option>
+                  </select>
+                </div>
+
+                <!-- Dynamic fields will be injected here by platform.js -->
+                <div id="userFormDynamicFields" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+
+                <div class="mt-6">
+                  <button type="submit" class="btn-primary text-white font-semibold px-8 py-3 rounded-lg">
+                    Create User
+                  </button>
+                </div>
+              </form>
+            </div>
+
+
+          </div>
+
+          <div id="view-assign-users" class="view-content hidden">
+            <div class="mb-8">
+              <h1 class="text-3xl font-bold text-white mb-2">Assign Users</h1>
+              <p class="text-gray-400">Manage user assignments and levels</p>
+            </div>
+
+            <!-- Toggle between Scribe-centric and Provider-centric views -->
+            <div class="mb-4 flex items-center gap-3">
+              <button id="assignViewByScribeBtn" type="button" class="px-3 py-1.5 rounded-full text-xs font-semibold
+                       bg-gray-700 text-white border border-gray-600">
+                Scribes
+              </button>
+              <button id="assignViewByProviderBtn" type="button" class="px-3 py-1.5 rounded-full text-xs font-semibold
+                       bg-gray-800 text-gray-300 border border-gray-700">
+                Providers
+              </button>
+            </div>
+
+            <div id="assignByScribeView">
+
+
+
+              <!-- ================== ASSIGN USERS TOP FILTER PANEL ================== -->
+              <div id="assignTopPanel" class="mb-6 flex flex-wrap items-end gap-6">
+
+                <!-- LEFT: Scribe dropdown (only reportee scribes for manager) -->
+                <div>
+                  <label for="assignScribeFilter" class="block text-sm mb-1 text-gray-300">
+                    Select Scribe
+                  </label>
+                  <select id="assignScribeFilter"
+                    class="px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm text-white min-w-[200px]">
+                    <option value="">Select Scribe</option>
+                  </select>
+                </div>
+
+                <!-- MIDDLE: Clinic dropdown -->
+                <div>
+                  <label for="assignClinicFilter" class="block text-sm mb-1 text-gray-300">
+                    Select Clinic
+                  </label>
+                  <select id="assignClinicFilter"
+                    class="px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm text-white min-w-[200px]">
+                    <option value="">Select Clinic</option>
+                  </select>
+                </div>
+
+                <!-- RIGHT: Provider dropdown (filtered by clinic) -->
+                <div>
+                  <label for="assignProviderFilter" class="block text-sm mb-1 text-gray-300">
+                    Select Provider
+                  </label>
+                  <select id="assignProviderFilter"
+                    class="px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm text-white min-w-[220px]">
+                    <option value="">Select Provider</option>
+                  </select>
+                </div>
+
+                <!-- Save button (mapping logic to be wired in JS later) -->
+                <div class="mt-6">
+                  <button id="assignUsersSaveButton" type="button"
+                    class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-white text-sm">
+                    Save Assignment
+                  </button>
+                </div>
+              </div>
+              <!-- ================ END ASSIGN USERS TOP FILTER PANEL ================= -->
+
+
+              <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                <div class="overflow-x-auto">
+                  <table class="w-full">
+                    <thead class="border-b border-gray-700">
+                      <tr class="text-left text-gray-400 text-sm">
+                        <th class="pb-3">Scribe Name</th>
+                        <th class="pb-3">Scribe Email</th>
+                        <th class="pb-3">Scribe XR ID</th>
+                        <th class="pb-3">Provider XR ID</th>
+                        <th class="py-3 text-left">Clinic</th>
+                        <th class="pb-3">Provider Name</th>
+                        <th class="pb-3">Provider Email</th>
+                        <th class="pb-3">Scribe Manager</th>
+                        <th class="pb-3">Actions</th>
+                      </tr>
+                    </thead>
+
+
+                    <tbody id="assignUsersTable" class="text-gray-300">
+                      <tr>
+                        <td colspan="9" class="py-8 text-center text-gray-500">Loading users...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- end Scribe-centric view -->
+            </div> <!-- #assignByScribeView -->
+
+            <!-- Provider-centric view (hidden by default; JS will toggle visibility) -->
+            <div id="assignByProviderView" class="hidden">
+
+              <!-- Provider-first filter row -->
+                <div id="assignProviderTopPanel" class="mb-6 flex flex-wrap items-end gap-6">
+
+                  <!-- Clinic dropdown -->
+                  <div>
+                    <label for="assignClinicFilterByProvider" class="block text-sm mb-1 text-gray-300">
+                      Select Clinic
+                    </label>
+                    <select id="assignClinicFilterByProvider"
+                      class="px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm text-white min-w-[220px]">
+                      <option value="">Select Clinic</option>
+                    </select>
+                  </div>
+
+                  <!-- Provider dropdown (filtered by clinic) -->
+                  <div>
+                    <label for="assignProviderFilterByProvider" class="block text-sm mb-1 text-gray-300">
+                      Select Provider
+                    </label>
+                    <select id="assignProviderFilterByProvider"
+                      class="px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm text-white min-w-[260px]">
+                      <option value="">Select clinic first</option>
+                    </select>
+                  </div>
+
+                  <!-- Manager dropdown -->
+                  <div>
+                    <label for="assignManagerFilterByProvider" class="block text-sm mb-1 text-gray-300">
+                      Select Manager
+                    </label>
+                    <select id="assignManagerFilterByProvider"
+                      class="px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm text-white min-w-[220px]">
+                      <option value="">Select provider first</option>
+                    </select>
+                  </div>
+
+                  <!-- Reportee dropdown -->
+                  <div>
+                    <label for="assignReporteeFilterByProvider" class="block text-sm mb-1 text-gray-300">
+                      Select Reportee
+                    </label>
+                    <select id="assignReporteeFilterByProvider"
+                      class="px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm text-white min-w-[260px]">
+                      <option value="">Select manager first</option>
+                    </select>
+                  </div>
+
+                  <!-- Save -->
+                  <div>
+                    <button id="assignUsersSaveButtonByProvider" class="btn-primary px-4 py-2 rounded text-sm">
+                      Save Assignment
+                    </button>
+                  </div>
+                </div>
+
+
+                <!-- Provider-centric table -->
+                <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+                  <div class="overflow-x-auto">
+                    <table class="w-full">
+                      <thead class="border-b border-gray-700">
+                        <tr class="text-left text-gray-400 text-sm">
+                          <th class="pb-3">Provider Name</th>
+                          <th class="pb-3">Provider Email</th>
+                          <th class="pb-3">Provider XR ID</th>
+                          <th class="pb-3">Clinic</th>
+                          <th class="pb-3">Scribe Name</th>
+                          <th class="pb-3">Scribe Email</th>
+                          <th class="pb-3">Scribe XR ID</th>
+                          <th class="pb-3">Scribe Manager</th>
+                          <th class="pb-3">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="assignUsersTableByProvider" class="text-gray-300">
+                        <tr>
+                          <td colspan="9" class="py-8 text-center text-gray-500">
+                            Select a Provider above to view assignments.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+            </div> <!-- #assignByProviderView -->
+
+          </div> <!-- #view-assign-users -->
+
+
+          <div id="view-system-logs" class="view-content hidden">
+            <div class="mb-8">
+              <h1 class="text-3xl font-bold text-white mb-2">System Logs</h1>
+              <p class="text-gray-400">View system activity and logs</p>
+            </div>
+
+            <div class="bg-gray-800 rounded-xl p-8 shadow-lg">
+              <p class="text-gray-400 text-center">System logs feature coming soon...</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/public/js/platform.js"></script>
+
+  <!-- ===================== USER PROFILE SIDE PANEL ===================== -->
+  <div id="profilePanel" class="hidden fixed inset-0 z-50 flex justify-end bg-black/40">
+
+    <!-- Right-side drawer -->
+    <div class="h-full w-full max-w-xl bg-gray-900 text-white shadow-2xl border-l border-gray-800 flex flex-col">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+        <div>
+          <h2 class="text-xl font-bold">My Profile</h2>
+          <p class="text-xs text-gray-400 mt-1">
+            Signed in as <span id="profileEmailHeader"></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto px-6 py-4 space-y-6 text-sm">
+
+        <!-- Basic info -->
+        <section class="space-y-2">
+          <p>
+            <span class="font-semibold">Name:</span>
+            <span id="profileName" class="ml-1"></span>
+          </p>
+          <p>
+            <span class="font-semibold">Email:</span>
+            <span id="profileEmail" class="ml-1"></span>
+          </p>
+          <p>
+            <span class="font-semibold">Role:</span>
+            <span id="profileRole" class="ml-1"></span>
+          </p>
+        </section>
+
+        <hr class="border-gray-700" />
+
+        <!-- Reporting / direct reportees -->
+        <section class="space-y-3">
+          <div>
+            <h3 class="text-sm font-semibold mb-1">Reporting To</h3>
+            <p id="profileReportingTo" class="text-gray-300">Loading...</p>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-semibold mb-1">My Reportees</h3>
+            <ul id="profileReportees" class="list-disc list-inside text-gray-300 text-sm space-y-1"></ul>
+          </div>
+        </section>
+
+        <!-- Full organization tree (SuperAdmin only; JS controls visibility) -->
+        <section id="profileHierarchySection" class="space-y-2 hidden">
+          <h3 id="profileHierarchyTitle" class="text-sm font-semibold">Organization Tree</h3>
+          <div id="profileHierarchyTree" class="text-xs text-gray-100"></div>
+          <div id="profileHierarchyStats" class="mt-1 text-[11px] text-gray-400"></div>
+        </section>
+
+      </div>
+
+      <!-- Footer with close button -->
+      <div class="px-6 py-4 border-t border-gray-800">
+        <button id="closeProfile" class="w-full bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded-lg">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- ================== END PROFILE SIDE PANEL ========================== -->
+
+
+
+</body>
+
+</html>

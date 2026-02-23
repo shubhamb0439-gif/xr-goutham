@@ -1,0 +1,752 @@
+/* =========================
+   GLOBAL APP STYLES
+   ========================= */
+* { box-sizing: border-box; }
+
+:root{
+  /* EHR dock width (THIS is what we resize) */
+  --ehr-sidebar-w: 550px;
+
+  /* Splitter */
+  --splitter-size: 8px;
+  --splitter-hit: 12px;
+
+  /* EHR handle (better UX) */
+  --ehr-handle-hit: 18px;                 /* easy to grab */
+  --ehr-handle-line: 2px;                 /* thin standard line */
+  --ehr-handle-color: rgba(99,102,241,.9);
+
+  /* Resizable sizes (JS updates these) */
+  --left-pane-w: 430px;
+  --left-top-h: 150px;
+  --right-top-h: 520px;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #1a202c;
+  margin: 0;
+  padding: 0;
+  color: #fff;
+}
+
+/* When EHR opens: the whole app shifts left smoothly */
+#appRoot{
+  height: 100%;
+  transition: padding-right 0.35s ease;
+  will-change: padding-right;
+}
+@media (min-width: 768px){
+  body.ehr-open #appRoot{ padding-right: var(--ehr-sidebar-w); }
+}
+
+/* While resizing: remove transitions so drag feels “standard” */
+body.is-resizing #appRoot{ transition: none !important; }
+
+/* Header / Status */
+h1 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 28px;
+  color: #c7d2fe;
+}
+
+#status { font-weight: bold; padding: 4px 12px; border-radius: 8px; }
+.connecting, .bg-yellow-500 { background-color: #f1c40f !important; color: #fff !important; }
+.connected, .bg-green-500  { background-color: #22c55e !important; color: #fff !important; }
+.disconnected, .bg-red-600 { background-color: #e74c3c !important; color: #fff !important; }
+
+/* Inputs */
+input, textarea {
+  background: #23272f;
+  color: #fff;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  padding: 8px;
+}
+input:focus, textarea:focus { outline: none; border-color: #6366f1; }
+input::placeholder, textarea::placeholder { color: #94a3b8; }
+
+/* Device List */
+ul#deviceList { padding-left: 18px; }
+
+/* Buttons (keep your look; we only standardize SOAP action buttons below) */
+button { transition: background-color 0.3s; font-weight: 500; }
+#sendButton, #clearMessagesBtn, #openEmulator { min-width: 100px; margin-left: 6px; }
+#sendButton:active, #clearMessagesBtn:active, #openEmulator:active { opacity: 0.8; }
+
+/* Responsive (kept as-is) */
+@media (max-width: 900px) {
+  .flex, .flex-col, .flex-1 { flex-direction: column !important; }
+  .w-2\/3, .w-1\/3 { width: 100% !important; }
+  .h-full, .h-auto { height: auto !important; min-height: 200px; }
+  #xrVideo, #remoteVideo { min-height: 160px; height: 200px; max-height: 300px; }
+  .max-h-32, .max-h-48, .max-h-24, .max-h-20 { max-height: 120px !important; }
+  .space-y-6, .space-y-4 { gap: 1rem !important; }
+}
+@media (max-width: 600px) {
+  h1 { font-size: 20px; }
+  #status { font-size: 12px; padding: 2px 6px; }
+  .container { padding: 8px; }
+  .px-3, .px-4, .px-6 { padding-left: 8px !important; padding-right: 8px !important; }
+  .py-3, .py-4, .py-6 { padding-top: 8px !important; padding-bottom: 8px !important; }
+  .rounded, .rounded-full, .rounded-lg { border-radius: 4px !important; }
+  #xrVideo, #remoteVideo { height: 140px !important; }
+  textarea { height: 60px !important; }
+}
+@media (max-width: 400px) {
+  .recent-message-header, .message-header { font-size: 11px !important; }
+  .sender-info, .xr-id { font-size: 10px !important; }
+  .message-content, .recent-message-content { font-size: 12px !important; }
+}
+
+/* =========================
+   SCRIBE PANEL STYLES
+   ========================= */
+
+/* Scrollbars */
+.scribe-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.scribe-scroll::-webkit-scrollbar-track { background: #0b0f19; border-radius: 10px; }
+.scribe-scroll::-webkit-scrollbar-thumb { background: #6b7280; border-radius: 10px; border: 2px solid #0b0f19; }
+.scribe-scroll::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.scribe-scroll { scrollbar-width: thin; scrollbar-color: #6b7280 #0b0f19; }
+
+/* Cards */
+.scribe-card{
+  position:relative;
+  background:#1f2937;
+  padding:12px;
+  border-radius:10px;
+  margin-bottom:10px;
+  transition:background .15s ease;
+  cursor:pointer;
+  min-width: 0;
+}
+.scribe-card:hover{ background:#222b3a }
+.scribe-card-active{ outline:2px solid #2563eb; background:#243041 }
+.scribe-delete{ position:absolute; top:8px; right:8px; color:#ef4444; font-size:16px; line-height:1; background:transparent; border:0; cursor:pointer }
+.scribe-delete:hover{ transform:scale(1.1) }
+.scribe-card * { min-width: 0; }
+.scribe-card .message-content,
+.scribe-card .recent-message-content{
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* SOAP editor container + sections */
+.scribe-soap-scroll{ height:100%; overflow-y:auto; padding:12px; min-height:0; }
+.scribe-section{ background:#1f2937; padding:12px; border-radius:10px; margin-bottom:10px }
+.scribe-section-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px }
+.scribe-section h3{ font-size:14px; font-weight:600; margin:0; color:#fff }
+.scribe-section .scribe-section-meta{ font-size:13px; color:#a7f3d0; font-weight:600; margin-left:12px }
+.scribe-textarea{
+  width:100%;
+  background:#0f172a;
+  color:#fff;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.06);
+  resize:none;
+  min-height:60px;
+  outline:none;
+  overflow-wrap: anywhere;
+}
+
+/* =========================
+   FIX 1: SOAP FOOTER (remove black band)
+   ========================= */
+/* REPLACES your old .scribe-soap-actions gradient + negative margins */
+.scribe-soap-actions{
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+
+  /* NO black gradient band */
+  background: transparent;
+
+  /* remove the overlay effect */
+  margin: 0;
+  padding: 10px 12px;
+
+  /* keep it clean */
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Buttons in SOAP footer: same size/shape */
+.scribe-btn{
+  height: 36px;
+  min-width: 132px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 0;
+  color:#fff;
+  cursor:pointer;
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+.scribe-btn-primary{ background:#16a34a }
+.scribe-btn-primary:hover{ background:#15803d }
+.scribe-btn-ghost{ background:#374151 }
+.scribe-btn-ghost:hover{ background:#4b5563 }
+
+/* =========================
+   Add To EHR button states
+   ========================= */
+
+/* Enabled state - Jet Red */
+#_scribe_add_ehr{
+  background: #950606 !important;
+}
+#_scribe_add_ehr:hover{
+  background: #7a0505 !important;
+}
+
+
+/* Disabled state - Dim Red */
+#_scribe_add_ehr.scribe-add-ehr-disabled,
+#_scribe_add_ehr:disabled{
+  background: #7f1d1d !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
+
+/* Responsive footer buttons */
+@media (max-width: 520px){
+  .scribe-soap-actions{ flex-wrap: wrap; }
+  .scribe-soap-actions .scribe-btn{ flex: 1 1 calc(50% - 10px); min-width: 0; }
+  .scribe-soap-actions .scribe-btn:last-child{ flex-basis: 100%; }
+}
+
+/* Add EHR disabled style (kept) */
+.scribe-add-ehr-disabled{ background:#7f1d1d; color:#fff; opacity:0.95; cursor:not-allowed }
+/* =========================
+   RESIZABLE PANEL LAYOUT
+   ========================= */
+.scribe-layout{ min-height: 0; }
+
+/* Make sure flex children can shrink */
+#leftPane, #rightPane, #devicesPanel, #translationPanel, #rightSplit, #soapPane, #aiPane{
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Desktop: left pane uses resizable fixed flex-basis */
+@media (min-width: 768px){
+  #leftPane{
+    flex: 0 0 var(--left-pane-w);
+    width: auto !important;
+    max-width: 65vw;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  #rightPane{ flex: 1 1 auto; }
+}
+
+/* Left internal split */
+.scribe-pane{ display:flex; flex-direction:column; }
+.scribe-pane-section{
+  background: rgba(0,0,0,0.10);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.scribe-pane-head{
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.18);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.scribe-pane-body{
+  padding: 10px 12px;
+  overflow: auto;
+  min-height: 0;
+}
+.scribe-pane-body--fill{
+  padding: 0;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+
+#devicesPanel{ flex: 0 0 var(--left-top-h); min-height: 92px; }
+#translationPanel{
+  flex: 1 1 auto;
+  min-height: 0;
+  display:flex;
+  flex-direction:column;
+}
+#translationPanel .scribe-pane-body--fill{ flex: 1 1 auto; }
+
+/* Right internal split */
+.scribe-right-split{ display:flex; flex-direction:column; min-height:0; }
+#soapPane{
+  flex: 0 0 var(--right-top-h);
+  min-height: 220px;
+  overflow: hidden;
+  display:flex;
+  flex-direction:column;
+}
+#soapScroller{ flex: 1 1 auto; min-height: 0; }
+#aiPane{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display:flex;
+  flex-direction:column;
+  background: rgba(0,0,0,0.08);
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* =========================
+   Resize handles (your existing style)
+   ========================= */
+.resize-handle{
+  position: relative;
+  background: rgba(255,255,255,0.05);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+  touch-action: none;
+}
+.resize-handle:hover,
+.resize-handle:focus{
+  background: rgba(99,102,241,0.18);
+  box-shadow: 0 0 0 1px rgba(99,102,241,0.25) inset;
+}
+.resize-handle-vertical{ width: var(--splitter-size); cursor: col-resize; }
+.resize-handle-horizontal{ height: var(--splitter-size); cursor: row-resize; }
+
+.resize-handle-vertical::before,
+.resize-handle-horizontal::before{
+  content:"";
+  position:absolute;
+  inset: calc(-1 * (var(--splitter-hit) - var(--splitter-size)) / 2);
+  background: transparent;
+}
+.resize-handle::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.7;
+  border-radius: 6px;
+}
+.resize-handle-vertical::after{
+  width: 2px;
+  height: 34px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.10), rgba(255,255,255,0.22), rgba(255,255,255,0.10));
+}
+.resize-handle-horizontal::after{
+  width: 34px;
+  height: 2px;
+  background: linear-gradient(to right, rgba(255,255,255,0.10), rgba(255,255,255,0.22), rgba(255,255,255,0.10));
+}
+
+body.is-resizing{ user-select: none; }
+body.is-resizing *{ user-select: none !important; }
+body.is-resizing[data-resize-orientation="vertical"]{ cursor: col-resize; }
+body.is-resizing[data-resize-orientation="horizontal"]{ cursor: row-resize; }
+
+/* Connected Devices: fully remove resize handle (no bar, no resize) */
+.resize-handle[data-resize="left-top"]{
+  display: none !important;
+}
+
+/* =========================
+   FIX 2: EHR RESIZE HANDLE (improved slider)
+   ========================= */
+.ehr-resize-handle{
+  /* take it out of sidebar flow so it never creates a “box” */
+  position: fixed;
+  top: 0;
+  bottom: 0;
+
+  /* center the hit-area on the EHR left edge */
+  right: calc(var(--ehr-sidebar-w) - (var(--ehr-handle-hit) / 2));
+  width: var(--ehr-handle-hit);
+
+  z-index: 1000;
+  display: none;
+
+  /* remove the background block look */
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.ehr-sidebar.active .ehr-resize-handle{ display: block; }
+
+.ehr-resize-handle::before{
+  /* override base hit-area to be consistent */
+  content: none !important;
+}
+.ehr-resize-handle::after{
+  /* clean standard vertical line */
+  content:"";
+  position:absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--ehr-handle-line);
+  height: 58px;
+  border-radius: 999px;
+  background: var(--ehr-handle-color);
+  opacity: 1;
+}
+.ehr-resize-handle:hover::after,
+.ehr-resize-handle:focus::after,
+body.is-resizing .ehr-resize-handle::after{
+  height: 66px;
+  background: rgba(99,102,241,1);
+}
+
+/* Small screens: hide splitters */
+@media (max-width: 767px){
+  .resize-handle{ display:none; }
+  body.ehr-open #appRoot{ padding-right: 0; }
+}
+
+/* =========================
+   SOAP header: left title + right Total Edits (matches screenshot)
+   ========================= */
+
+.scribe-soap-headerbar{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  padding: 10px 14px;
+}
+
+.scribe-soap-header{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* hard push to corners */
+  gap: 12px;
+}
+
+.scribe-soap-title{
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  min-width: 0;
+}
+
+/* RIGHT CORNER: Total Edits */
+#totalEditsSlot{
+  margin-left: auto;              /* safety */
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  white-space: nowrap;
+  text-align: right;
+
+  /* green like screenshot */
+  color: #34d399;                 /* emerald */
+  font-size: 12px;
+  font-weight: 800;
+
+  /* ensure it never looks like a box */
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+/* If your JS renders a <div>/<span> inside the slot, force it to inherit */
+#totalEditsSlot *{
+  color: inherit !important;
+  font: inherit !important;
+  background: transparent !important;
+  border: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap !important;
+}
+
+@media (min-width: 768px){
+  #totalEditsSlot{ font-size: 13px; }
+}
+
+.scribe-ai-head{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.scribe-ai-title{ margin: 0; }
+.scribe-ai-body{ flex: 1 1 auto; min-height: 0; }
+.scribe-ai-empty{
+  padding: 12px;
+  font-size: 12px;
+  color: rgba(203,213,225,0.85);
+}
+
+/* =========================
+   EHR BUTTON & SIDEBAR (kept)
+   ========================= */
+.ehr-button {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: transform 0.25s ease, background 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+.ehr-button:hover { background: #4f46e5; }
+.ehr-button:active { transform: translateY(1px); }
+
+.ehr-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+  z-index: 998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.ehr-overlay.active { opacity: 1; pointer-events: auto; }
+
+.ehr-sidebar {
+  position: fixed;
+  top: 0;
+  right: calc(-1 * var(--ehr-sidebar-w));
+  width: var(--ehr-sidebar-w);
+  height: 100vh;
+  background: #030710;
+  z-index: 999;
+  box-shadow: -8px 0 26px rgba(0, 0, 0, 0.55);
+  transition: right 0.35s ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ehr-sidebar.active { right: 0; }
+
+/* ... keep the rest of your EHR styles unchanged ... */
+/* Header */
+.ehr-sidebar-header {
+  background: #030710;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.ehr-header-flex {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ehr-header-title {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  flex: 1;
+}
+.ehr-demo-badge {
+  background: #fbbf24;
+  color: #1a1a1a;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.ehr-close-button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+}
+.ehr-close-button:hover { color: #d1d5db; }
+
+/* Content */
+.ehr-sidebar-content {
+  flex: 1;
+  overflow: hidden;
+  padding: 12px;
+  background: #030710;
+}
+
+/* Initial State */
+.ehr-initial-state {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ehr-input {
+  background: #23272f;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px;
+  color: #fff;
+  font-size: 12px;
+}
+.ehr-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.20);
+}
+.ehr-search-button {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0 16px;
+  height: 36px;
+  min-width: 132px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ehr-search-button:hover { background: #4f46e5; }
+
+.ehr-error {
+  background: rgba(220, 38, 38, 0.10);
+  border: 1px solid #dc2626;
+  border-radius: 4px;
+  padding: 8px;
+  color: #ef4444;
+  font-size: 12px;
+}
+
+/* Patient State */
+.ehr-patient-state {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Card */
+.ehr-card {
+  background: #0f1419;
+  border-radius: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.ehr-card-title {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+/* Patient Info */
+.ehr-patient-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
+.ehr-info-pair {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+}
+.ehr-label-text {
+  color: #9ca3af;
+  min-width: 55px;
+}
+.ehr-value-text {
+  color: #e5e7eb;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Clinical Notes */
+.ehr-notes-scroll {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-height: 88px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.ehr-notes-scroll::-webkit-scrollbar { width: 6px; }
+.ehr-notes-scroll::-webkit-scrollbar-track { background: transparent; }
+.ehr-notes-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); border-radius: 10px; }
+.ehr-notes-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
+
+.ehr-note-item {
+  background: #374151;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 20px;
+  padding: 6px 12px;
+  color: rgba(255,255,255,0.70);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.15s ease;
+}
+.ehr-note-item:hover {
+  background: #4b5563;
+  color: #fff;
+  border-color: rgba(99, 102, 241, 0.65);
+}
+.ehr-note-item.active {
+  background: #6366f1;
+  color: #fff;
+  border-color: #6366f1;
+}
+
+/* Note Content */
+.ehr-note-content {
+  max-height: calc(100vh - 360px);
+  overflow-y: auto;
+  padding-right: 6px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.ehr-note-content::-webkit-scrollbar { width: 8px; }
+.ehr-note-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.20); border-radius: 10px; }
+
+/* Placeholder */
+.ehr-placeholder {
+  color: rgba(255,255,255,0.40);
+  text-align: center;
+  padding: 20px 10px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ehr-sidebar {
+    width: 100%;
+    right: -100%;
+  }
+  .ehr-sidebar.active { right: 0; }
+
+  .ehr-patient-info-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .ehr-card { padding: 10px; }
+  .ehr-card-title { font-size: 12px; }
+  .ehr-patient-info-grid { grid-template-columns: 1fr; }
+}
