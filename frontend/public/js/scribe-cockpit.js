@@ -2830,7 +2830,12 @@
   }
 
   function handleSignalMessage(packet) {
-    if (!packet?.type) return;
+    if (!packet?.type) {
+      console.warn('[Signal] Received packet without type:', packet);
+      return;
+    }
+
+    console.log('[Signal] Received:', packet.type, 'room:', getPacketRoomId(packet));
 
     const msgRoom = getPacketRoomId(packet);
 
@@ -2859,6 +2864,19 @@
       const p = packet.data || {};
       const { from, to, text = '', final = false, timestamp } = p;
 
+      console.log('[Transcript] Received:', { from, to, text: text.substring(0, 50), final });
+
+      // Validate required fields
+      if (!from || !to) {
+        console.warn('[Transcript] Missing from/to fields:', { from, to });
+        return;
+      }
+
+      if (!text || text.trim().length === 0) {
+        console.log('[Transcript] Empty text, skipping');
+        return;
+      }
+
       const key = transcriptKey(from, to);
       const slot =
         (state.transcriptState.byKey[key] ||= { partial: '', paragraph: '', flushTimer: null });
@@ -2875,6 +2893,7 @@
       if (slot.flushTimer) clearTimeout(slot.flushTimer);
       slot.flushTimer = setTimeout(() => {
         if (slot.paragraph) {
+          console.log('[Transcript] Flushing paragraph:', slot.paragraph.substring(0, 50));
           appendTranscriptItem({ from, to, text: slot.paragraph, timestamp });
           slot.paragraph = '';
         }
@@ -3039,6 +3058,7 @@
       state.socket.on('connect', async () => {
         connected = true;
         clearTimeout(failTimer);
+        console.log('[Socket] Connected to:', state.SERVER_URL);
 
         // reset listeners
         state.socket.off('device_list', updateDeviceList);
@@ -3053,6 +3073,7 @@
         state.socket.on('signal', handleSignalMessage);
         // Backward/alternate event name support (some servers emit 'signal_message')
         state.socket.on('signal_message', handleSignalMessage);
+        console.log('[Socket] Signal handlers registered');
 
         state.socket.on('room_update', ({ pairs } = {}) => {
           try {
@@ -4035,8 +4056,21 @@
       };
     }
 
-    if (dom.mrnSearchButton) dom.mrnSearchButton.onclick = searchMRN;
-    if (dom.mrnInput) dom.mrnInput.addEventListener('keypress', (e) => e.key === 'Enter' && searchMRN());
+    if (dom.mrnSearchButton) {
+      dom.mrnSearchButton.onclick = searchMRN;
+      // Initialize search button state
+      const hasValue = dom.mrnInput?.value?.trim().length > 0;
+      dom.mrnSearchButton.disabled = !hasValue;
+    }
+    if (dom.mrnInput) {
+      dom.mrnInput.addEventListener('keypress', (e) => e.key === 'Enter' && searchMRN());
+      dom.mrnInput.addEventListener('input', () => {
+        if (dom.mrnSearchButton) {
+          const hasValue = dom.mrnInput.value.trim().length > 0;
+          dom.mrnSearchButton.disabled = !hasValue;
+        }
+      });
+    }
 
     // keep existing persistence behavior
     window.addEventListener('beforeunload', persistEHRState);
