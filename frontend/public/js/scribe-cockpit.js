@@ -884,7 +884,7 @@
     // Clear MRN input and reset placeholder
     if (dom.mrnInput) {
       dom.mrnInput.value = '';
-      dom.mrnInput.placeholder = 'Enter Patient MRN';
+      dom.mrnInput.placeholder = 'Select/Search MRN';
     }
 
     // Clear error messages
