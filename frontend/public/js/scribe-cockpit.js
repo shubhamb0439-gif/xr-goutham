@@ -147,10 +147,6 @@
     aiDiagnosisTimer: null,
     aiDiagnosisStartTime: null,
 
-    // Template selection requirement
-    templateSelected: false,
-    templateSelectionModal: null,
-
     // Summary cache invalidation on note edits
     noteTouchedAtByMrn: new Map(),
     lastNoteTouchedAt: 0,
@@ -261,155 +257,6 @@
   // =============================================================================
   //  STYLES
   // =============================================================================
-  function createTemplateSelectionModal() {
-    const modal = document.createElement('div');
-    modal.id = 'templateSelectionModal';
-    modal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.85);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      backdrop-filter: blur(4px);
-    `;
-
-    const content = document.createElement('div');
-    content.style.cssText = `
-      background: #1f2937;
-      padding: 32px;
-      border-radius: 12px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      max-width: 500px;
-      width: 90%;
-      text-align: center;
-    `;
-
-    const title = document.createElement('h2');
-    title.textContent = 'Select Note Template';
-    title.style.cssText = `
-      font-size: 24px;
-      font-weight: bold;
-      margin-bottom: 12px;
-      color: #fff;
-    `;
-
-    const desc = document.createElement('p');
-    desc.textContent = 'Please select a template before starting transcription';
-    desc.style.cssText = `
-      font-size: 14px;
-      color: #9ca3af;
-      margin-bottom: 24px;
-    `;
-
-    const select = document.createElement('select');
-    select.id = 'modalTemplateSelect';
-    select.style.cssText = `
-      width: 100%;
-      padding: 12px 16px;
-      font-size: 16px;
-      border: 2px solid #374151;
-      border-radius: 10px;
-      background: #111827;
-      color: #fff;
-      margin-bottom: 24px;
-      cursor: pointer;
-    `;
-
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.cssText = `
-      display: flex;
-      gap: 12px;
-      width: 100%;
-    `;
-
-    const confirmBtn = document.createElement('button');
-    confirmBtn.textContent = 'Confirm Selection';
-    confirmBtn.style.cssText = `
-      flex: 1;
-      padding: 12px 24px;
-      font-size: 16px;
-      font-weight: 700;
-      background: #6366f1;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.2s;
-    `;
-    confirmBtn.onmouseover = () => confirmBtn.style.background = '#4f46e5';
-    confirmBtn.onmouseout = () => confirmBtn.style.background = '#6366f1';
-
-    confirmBtn.onclick = () => {
-      const selectedValue = select.value;
-      if (selectedValue) {
-        state.templateSelected = true;
-        if (dom.templateSelect) {
-          dom.templateSelect.value = selectedValue;
-        }
-        modal.remove();
-        state.templateSelectionModal = null;
-      }
-    };
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.cssText = `
-      flex: 1;
-      padding: 12px 24px;
-      font-size: 16px;
-      font-weight: 700;
-      background: #374151;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.2s;
-    `;
-    cancelBtn.onmouseover = () => cancelBtn.style.background = '#4b5563';
-    cancelBtn.onmouseout = () => cancelBtn.style.background = '#374151';
-
-    cancelBtn.onclick = () => {
-      modal.remove();
-      state.templateSelectionModal = null;
-    };
-
-    buttonContainer.appendChild(confirmBtn);
-    buttonContainer.appendChild(cancelBtn);
-
-    content.appendChild(title);
-    content.appendChild(desc);
-    content.appendChild(select);
-    content.appendChild(buttonContainer);
-    modal.appendChild(content);
-
-    document.body.appendChild(modal);
-    state.templateSelectionModal = modal;
-
-    return { modal, select };
-  }
-
-  function showTemplateSelectionModal() {
-    if (state.templateSelectionModal) return;
-    if (state.templateSelected) return;
-
-    const { modal, select } = createTemplateSelectionModal();
-
-    if (dom.templateSelect) {
-      Array.from(dom.templateSelect.options).forEach(opt => {
-        const option = document.createElement('option');
-        option.value = opt.value;
-        option.textContent = opt.textContent;
-        select.appendChild(option);
-      });
-      select.value = dom.templateSelect.value;
-    }
-  }
-
   function ensureUiStyles() {
     if (document.getElementById('scribe-ui-css')) return;
 
@@ -985,12 +832,21 @@
 
     const ctx = getActiveHistoryContext();
     const existingNote = getActiveNoteForItem(ctx.item);
+    const existingTemplateId = getActiveTemplateIdForItem(ctx.item);
 
-    // If switching to a transcript that has an existing note, show it
+    // Reset EHR sidebar when switching transcripts
+    resetEhrSidebar();
+
+    // If switching to a transcript that has an existing note, restore it
     if (existingNote && Object.keys(existingNote).length > 0) {
       state.latestSoapNote = existingNote;
       if (!state.soapGenerating) renderSoapNote(state.latestSoapNote);
-      syncDropdownToActiveTranscript();
+
+      // Restore template selection
+      if (existingTemplateId && dom.templateSelect) {
+        dom.templateSelect.value = existingTemplateId;
+      }
+
       renderAiDiagnosisUi(null);
     } else {
       // No existing note - clear everything and show selection prompt
@@ -1010,6 +866,36 @@
     if (dom.noteDetail) {
       dom.noteDetail.innerHTML = `<div class="ehr-placeholder">Select a note to view details</div>`;
     }
+  }
+
+  function resetEhrSidebar() {
+    // Clear patient state
+    state.currentPatient = null;
+    state.currentNotes = [];
+    state.noteCache.clear();
+
+    // Reset UI to initial state
+    if (dom.ehrInitialState) dom.ehrInitialState.style.display = 'block';
+    if (dom.ehrPatientState) dom.ehrPatientState.style.display = 'none';
+
+    // Clear MRN input and reset placeholder
+    if (dom.mrnInput) {
+      dom.mrnInput.value = '';
+      dom.mrnInput.placeholder = 'Enter Patient MRN';
+    }
+
+    // Clear error messages
+    if (dom.ehrError) {
+      dom.ehrError.textContent = '';
+      dom.ehrError.style.display = 'none';
+    }
+
+    // Clear notes list and detail
+    if (dom.notesList) dom.notesList.innerHTML = '';
+    clearEhrNoteDetail();
+
+    // Clear session storage for EHR state
+    sessionStorage.removeItem(CONFIG.EHR_STORAGE_KEY);
   }
 
   function appendTranscriptItem({ from, to, text, timestamp }) {
@@ -2628,13 +2514,13 @@
       // ignore
     }
 
-    syncDropdownToActiveTranscript();
+    // Don't sync dropdown on init - let it stay on placeholder
+    // syncDropdownToActiveTranscript();
 
     dom.templateSelect.onchange = () => {
       const selectedValue = dom.templateSelect.value;
       if (!selectedValue) return; // ignore placeholder selection
-      state.templateSelected = true;
-      applyTemplateToActiveTranscript(selectedValue || CONFIG.SOAP_NOTE_TEMPLATE_ID);
+      applyTemplateToActiveTranscript(selectedValue);
     };
   }
 
@@ -3184,13 +3070,24 @@
     ensureTopHeadingBadge();
 
     const ctx = getActiveHistoryContext();
-    state.latestSoapNote = getActiveNoteForItem(ctx.item) || loadLatestSoap() || {};
+    state.latestSoapNote = getActiveNoteForItem(ctx.item) || {};
 
     if (!hist.length) {
       renderSoapBlank();
     } else {
-      renderSoapNote(state.latestSoapNote);
-      syncDropdownToActiveTranscript();
+      // Only render note if it exists
+      if (state.latestSoapNote && Object.keys(state.latestSoapNote).length > 0) {
+        renderSoapNote(state.latestSoapNote);
+        // Restore template selection only if there's an existing note
+        const templateId = getActiveTemplateIdForItem(ctx.item);
+        if (templateId && dom.templateSelect) {
+          dom.templateSelect.value = templateId;
+        }
+      } else {
+        // No note exists, show selection prompt
+        renderSoapBlank();
+        showNoteSelectionPrompt();
+      }
     }
 
     const scroller = soapContainerEnsure();
@@ -3460,8 +3357,19 @@
     if (ctx.item) {
       state.latestSoapNote = getActiveNoteForItem(ctx.item) || {};
       saveLatestSoap(state.latestSoapNote);
-      renderSoapNote(state.latestSoapNote);
-      syncDropdownToActiveTranscript();
+
+      // Only restore if there's an existing note
+      if (state.latestSoapNote && Object.keys(state.latestSoapNote).length > 0) {
+        renderSoapNote(state.latestSoapNote);
+        const templateId = getActiveTemplateIdForItem(ctx.item);
+        if (templateId) {
+          setTemplateSelectValue(templateId);
+        }
+      } else {
+        renderSoapBlank();
+        showNoteSelectionPrompt();
+        setTemplateSelectValue('');
+      }
     } else {
       renderSoapBlank();
       setTemplateSelectValue('');
@@ -4129,7 +4037,16 @@
       });
 
       await initTemplateDropdown();
-      setTemplateSelectValue(getActiveTemplateIdForItem(getActiveHistoryContext().item));
+
+      // Restore template selection only if there's an existing note for the active transcript
+      const ctx = getActiveHistoryContext();
+      const existingNote = getActiveNoteForItem(ctx.item);
+      if (existingNote && Object.keys(existingNote).length > 0) {
+        const templateId = getActiveTemplateIdForItem(ctx.item);
+        if (templateId) {
+          setTemplateSelectValue(templateId);
+        }
+      }
 
       renderAiDiagnosisUi(null);
     } catch (e) {
