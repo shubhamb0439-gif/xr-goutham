@@ -822,7 +822,8 @@
     return card;
   }
 
-  function setActiveTranscriptId(id) {
+  function setActiveTranscriptId(id, isNewTranscript = false) {
+    const previousActiveId = state.currentActiveItemId;
     state.currentActiveItemId = id;
     saveActiveItemId(id);
     highlightActiveCard();
@@ -834,8 +835,10 @@
     const existingNote = getActiveNoteForItem(ctx.item);
     const existingTemplateId = getActiveTemplateIdForItem(ctx.item);
 
-    // Reset EHR sidebar when switching transcripts
-    resetEhrSidebar();
+    // Only reset EHR sidebar when switching between existing transcripts (not when creating new one)
+    if (!isNewTranscript && previousActiveId && previousActiveId !== id) {
+      resetEhrSidebar();
+    }
 
     // If switching to a transcript that has an existing note, restore it
     if (existingNote && Object.keys(existingNote).length > 0) {
@@ -923,7 +926,8 @@
     trimTranscriptIfNeeded();
     dom.transcript.scrollTop = dom.transcript.scrollHeight;
 
-    setActiveTranscriptId(item.id);
+    // Pass true to indicate this is a new transcript (don't reset EHR)
+    setActiveTranscriptId(item.id, true);
 
     // Do not auto-generate note - user must select template manually
     renderSoapBlank();
